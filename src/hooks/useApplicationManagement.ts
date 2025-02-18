@@ -83,36 +83,6 @@ export const useApplicationManagement = (offerId?: string) => {
     enabled: !!offerId
   })
 
-  const applyToOffer = useMutation({
-    mutationFn: async (offerId: string) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
-      const { error } = await supabase
-        .from('offer_applications')
-        .insert({
-          offer_id: offerId,
-          applicant_id: user.id,
-          status: 'pending'
-        })
-      
-      if (error) throw error
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Application submitted successfully",
-      })
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to submit application: " + error.message,
-        variant: "destructive",
-      })
-    }
-  })
-
   const updateApplicationStatus = useMutation({
     mutationFn: async ({ applicationId, status }: { applicationId: string, status: 'accepted' | 'rejected' }) => {
       const { error: applicationError } = await supabase
@@ -142,17 +112,29 @@ export const useApplicationManagement = (offerId?: string) => {
         }
       }
     },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Application status updated successfully",
-      })
+    onMutate: async ({ applicationId, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['offer-applications'] })
+      const previousApplications = queryClient.getQueryData(['offer-applications'])
+
+      // Optimistically update the application status
+      queryClient.setQueryData(['offer-applications'], (old: any[]) => 
+        old?.map(app => app.id === applicationId ? { ...app, status } : app)
+      )
+
+      return { previousApplications }
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      queryClient.setQueryData(['offer-applications'], context?.previousApplications)
       toast({
         title: "Error",
         description: "Failed to update application status: " + error.message,
         variant: "destructive",
+      })
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Application status updated successfully",
       })
     }
   })
@@ -161,9 +143,7 @@ export const useApplicationManagement = (offerId?: string) => {
     applications,
     userApplication,
     isLoadingApplications,
-    applyToOffer: applyToOffer.mutate,
     updateApplicationStatus: updateApplicationStatus.mutate,
-    isApplying: applyToOffer.isPending,
     isUpdating: updateApplicationStatus.isPending
   }
 }

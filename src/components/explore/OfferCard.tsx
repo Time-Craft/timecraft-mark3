@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import OfferHeader from "./OfferHeader"
 import OfferStatus from "./OfferStatus"
-import { Check, Hourglass, X, Trash2 } from "lucide-react"
+import { Check, X, Trash2 } from "lucide-react"
 import { useApplicationManagement } from "@/hooks/useApplicationManagement"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
@@ -29,10 +29,8 @@ interface OfferCardProps {
 const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps) => {
   const { toast } = useToast()
   const { 
-    applyToOffer, 
     applications, 
     updateApplicationStatus,
-    userApplication 
   } = useApplicationManagement(offer.id)
 
   const { data: currentUser } = useQuery({
@@ -73,34 +71,6 @@ const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps
     }
   }
 
-  const renderApplyButton = () => {
-    if (userApplication) {
-      return (
-        <Button 
-          disabled 
-          variant="secondary"
-          className="w-full md:w-auto mt-4 md:mt-0"
-        >
-          <Hourglass className="h-4 w-4 mr-1" />
-          {userApplication.status === 'pending' ? 'Application Pending' : 
-            userApplication.status === 'accepted' ? 'Application Accepted' : 
-            'Application Rejected'}
-        </Button>
-      )
-    }
-
-    return (
-      <Button 
-        onClick={() => applyToOffer(offer.id)}
-        disabled={offer.status !== 'available'}
-        className="w-full md:w-auto mt-4 md:mt-0 bg-teal hover:bg-teal/90 text-cream"
-      >
-        <Check className="h-4 w-4 mr-1" />
-        {offer.status === 'available' ? 'Apply' : 'Not Available'}
-      </Button>
-    )
-  }
-
   return (
     <Card className="gradient-border card-hover">
       <CardContent className="p-6">
@@ -119,7 +89,6 @@ const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
-            {!isOwner && renderApplyButton()}
           </div>
         </div>
 
