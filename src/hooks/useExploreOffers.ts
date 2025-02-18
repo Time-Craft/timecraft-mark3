@@ -22,6 +22,7 @@ export const useExploreOffers = () => {
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
 
+  // Enhanced query with real-time invalidation
   const { data: offers, isLoading } = useQuery({
     queryKey: ['offers', searchQuery],
     queryFn: async () => {
@@ -63,6 +64,7 @@ export const useExploreOffers = () => {
     },
   })
 
+  // Real-time subscription setup
   useEffect(() => {
     const channel = supabase
       .channel('offers-changes')
@@ -73,7 +75,8 @@ export const useExploreOffers = () => {
           schema: 'public',
           table: 'offers'
         },
-        () => {
+        (payload) => {
+          console.log('Real-time update received:', payload)
           queryClient.invalidateQueries({ queryKey: ['offers'] })
         }
       )
@@ -92,6 +95,9 @@ export const useExploreOffers = () => {
         .eq('id', offerId)
       
       if (error) throw error
+
+      // Immediately invalidate queries to trigger a refresh
+      queryClient.invalidateQueries({ queryKey: ['offers'] })
     },
     onSuccess: () => {
       toast({
@@ -99,7 +105,7 @@ export const useExploreOffers = () => {
         description: "Offer accepted successfully",
       })
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error",

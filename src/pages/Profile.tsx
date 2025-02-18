@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +8,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useQuery } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
-import OfferCard from "@/components/explore/OfferCard" // Added this import
+import OfferCard from "@/components/explore/OfferCard"
 
 const Profile = () => {
   const navigate = useNavigate()
@@ -17,6 +16,7 @@ const Profile = () => {
   const [username, setUsername] = useState("")
   const [services, setServices] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const queryClient = useQueryClient()
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],
@@ -36,6 +36,28 @@ const Profile = () => {
   })
 
   useEffect(() => {
+    const channel = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${profile?.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['profile'] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [profile?.id, queryClient])
+
+  useEffect(() => {
     if (profile) {
       setUsername(profile.username || '')
       setServices(profile.services?.join(', ') || '')
@@ -46,6 +68,13 @@ const Profile = () => {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
+      
+      queryClient.clear()
+      
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      })
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -73,6 +102,8 @@ const Profile = () => {
         .eq('id', user.id)
 
       if (error) throw error
+
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
 
       toast({
         title: "Profile updated",
@@ -105,6 +136,52 @@ const Profile = () => {
       return data
     }
   })
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('user-offers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offers',
+          filter: `profile_id=eq.${profile?.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['user-offers'] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [profile?.id, queryClient])
+
+  const handleDeleteOffer = async (offerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('offers')
+        .delete()
+        .eq('id', offerId)
+
+      if (error) throw error
+
+      queryClient.invalidateQueries({ queryKey: ['user-offers'] })
+
+      toast({
+        title: "Success",
+        description: "Offer deleted successfully"
+      })
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to delete offer: ${error.message}`
+      })
+    }
+  }
 
   return (
     <div className="container mx-auto p-4 space-y-6 max-w-2xl">
@@ -188,6 +265,7 @@ const Profile = () => {
                     }
                   }}
                   showApplications={true}
+                  onDelete={handleDeleteOffer}
                 />
               ))
             )}
