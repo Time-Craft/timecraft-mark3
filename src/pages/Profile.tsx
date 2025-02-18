@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -5,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query" // Added useQueryClient import
 import { Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import OfferCard from "@/components/explore/OfferCard"
@@ -159,27 +160,30 @@ const Profile = () => {
     }
   }, [profile?.id, queryClient])
 
-  const handleDeleteOffer = async (offerId: string) => {
-    try {
-      const { error } = await supabase
-        .from('offers')
-        .delete()
-        .eq('id', offerId)
+  // Changed the function to match the expected type
+  const handleDeleteOffer = () => {
+    return async (offerId: string) => {
+      try {
+        const { error } = await supabase
+          .from('offers')
+          .delete()
+          .eq('id', offerId)
 
-      if (error) throw error
+        if (error) throw error
 
-      queryClient.invalidateQueries({ queryKey: ['user-offers'] })
+        queryClient.invalidateQueries({ queryKey: ['user-offers'] })
 
-      toast({
-        title: "Success",
-        description: "Offer deleted successfully"
-      })
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Failed to delete offer: ${error.message}`
-      })
+        toast({
+          title: "Success",
+          description: "Offer deleted successfully"
+        })
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: `Failed to delete offer: ${error.message}`
+        })
+      }
     }
   }
 
@@ -265,7 +269,7 @@ const Profile = () => {
                     }
                   }}
                   showApplications={true}
-                  onDelete={handleDeleteOffer}
+                  onDelete={handleDeleteOffer()}
                 />
               ))
             )}
