@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import OfferCard from "@/components/explore/OfferCard"
@@ -40,7 +40,8 @@ const Profile = () => {
 
       if (error) throw error
       return data
-    }
+    },
+    staleTime: 1000 * 60 * 5
   })
 
   useEffect(() => {
@@ -54,8 +55,8 @@ const Profile = () => {
           table: 'profiles',
           filter: `id=eq.${profile?.id}`
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['profile'] })
+        (payload) => {
+          queryClient.setQueryData(['profile'], payload.new)
         }
       )
       .subscribe()
@@ -65,12 +66,138 @@ const Profile = () => {
     }
   }, [profile?.id, queryClient])
 
-  useEffect(() => {
-    if (profile) {
-      setUsername(profile.username || '')
-      setServices(profile.services?.join(', ') || '')
+  const updateProfileMutation = useMutation({
+    mutationFn: async ({ username, services }: { username: string, services: string[] }) => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("No user found")
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username,
+          services,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+
+      if (error) throw error
+    },
+    onMutate: async ({ username, services }) => {
+      await queryClient.cancelQueries({ queryKey: ['profile'] })
+      const previousProfile = queryClient.getQueryData(['profile'])
+
+      queryClient.setQueryData(['profile'], (old: any) => ({
+        ...old,
+        username,
+        services
+      }))
+
+      return { previousProfile }
+    },
+    onError: (err, newProfile, context) => {
+      queryClient.setQueryData(['profile'], context?.previousProfile)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
     }
-  }, [profile])
+  })
+
+  const { data: userOffers } = useQuery({
+    queryKey: ['user-offers'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("No user found")
+
+      const { data, error } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('profile_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data
+    },
+    staleTime: 1000 * 60 * 5
+  })
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('user-offers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offers',
+          filter: `profile_id=eq.${profile?.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            queryClient.setQueryData(['user-offers'], (old: any[]) => 
+              old?.filter(offer => offer.id !== payload.old.id)
+            )
+          } else if (payload.eventType === 'INSERT') {
+            queryClient.setQueryData(['user-offers'], (old: any[]) => 
+              [payload.new, ...(old || [])]
+            )
+          } else if (payload.eventType === 'UPDATE') {
+            queryClient.setQueryData(['user-offers'], (old: any[]) => 
+              old?.map(offer => offer.id === payload.new.id ? payload.new : offer)
+            )
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [profile?.id, queryClient])
+
+  const deleteOfferMutation = useMutation({
+    mutationFn: async (offerId: string) => {
+      const { error: updateError } = await supabase
+        .from('offers')
+        .update({ 
+          status: OFFER_STATUSES.CANCELLED,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', offerId)
+
+      if (updateError) throw updateError
+
+      const { error: deleteError } = await supabase
+        .from('offers')
+        .delete()
+        .eq('id', offerId)
+
+      if (deleteError) throw deleteError
+    },
+    onMutate: async (offerId) => {
+      await queryClient.cancelQueries({ queryKey: ['user-offers'] })
+      const previousOffers = queryClient.getQueryData(['user-offers'])
+      
+      queryClient.setQueryData(['user-offers'], (old: any[]) => 
+        old?.filter(offer => offer.id !== offerId)
+      )
+
+      return { previousOffers }
+    },
+    onError: (err, offerId, context) => {
+      queryClient.setQueryData(['user-offers'], context?.previousOffers)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to delete offer: ${err.message}`
+      })
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Offer deleted successfully"
+      })
+    }
+  })
 
   const handleLogout = async () => {
     try {
@@ -97,21 +224,10 @@ const Profile = () => {
     setIsSubmitting(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No user found")
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          username,
-          services: services.split(',').map(s => s.trim()),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id)
-
-      if (error) throw error
-
-      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      await updateProfileMutation.mutateAsync({
+        username,
+        services: services.split(',').map(s => s.trim())
+      })
 
       toast({
         title: "Profile updated",
@@ -128,78 +244,9 @@ const Profile = () => {
     }
   }
 
-  const { data: userOffers } = useQuery({
-    queryKey: ['user-offers'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No user found")
-
-      const { data, error } = await supabase
-        .from('offers')
-        .select('*')
-        .eq('profile_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      return data
-    }
-  })
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('user-offers-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'offers',
-          filter: `profile_id=eq.${profile?.id}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['user-offers'] })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [profile?.id, queryClient])
-
   const handleDeleteOffer = (offerId: string) => {
-    return async () => {
-      try {
-        const { error: updateError } = await supabase
-          .from('offers')
-          .update({ 
-            status: OFFER_STATUSES.CANCELLED,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', offerId)
-
-        if (updateError) throw updateError
-
-        const { error: deleteError } = await supabase
-          .from('offers')
-          .delete()
-          .eq('id', offerId)
-
-        if (deleteError) throw deleteError
-
-        queryClient.invalidateQueries({ queryKey: ['user-offers'] })
-
-        toast({
-          title: "Success",
-          description: "Offer deleted successfully"
-        })
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: `Failed to delete offer: ${error.message}`
-        })
-      }
+    return () => {
+      deleteOfferMutation.mutate(offerId)
     }
   }
 
