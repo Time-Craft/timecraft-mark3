@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
-import { useQuery, useQueryClient } from "@tanstack/react-query" // Added useQueryClient import
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import OfferCard from "@/components/explore/OfferCard"
@@ -160,9 +159,8 @@ const Profile = () => {
     }
   }, [profile?.id, queryClient])
 
-  // Changed the function to match the expected type
-  const handleDeleteOffer = () => {
-    return async (offerId: string) => {
+  const handleDeleteOffer = (offerId: string) => {
+    return async () => {
       try {
         const { error } = await supabase
           .from('offers')
@@ -269,7 +267,7 @@ const Profile = () => {
                     }
                   }}
                   showApplications={true}
-                  onDelete={handleDeleteOffer()}
+                  onDelete={handleDeleteOffer(offer.id)}
                 />
               ))
             )}
