@@ -10,6 +10,14 @@ import { Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import OfferCard from "@/components/explore/OfferCard"
 
+const OFFER_STATUSES = {
+  AVAILABLE: 'available',
+  PENDING: 'pending',
+  ACCEPTED: 'accepted',
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled'
+} as const
+
 const Profile = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -162,12 +170,22 @@ const Profile = () => {
   const handleDeleteOffer = (offerId: string) => {
     return async () => {
       try {
-        const { error } = await supabase
+        const { error: updateError } = await supabase
+          .from('offers')
+          .update({ 
+            status: OFFER_STATUSES.CANCELLED,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', offerId)
+
+        if (updateError) throw updateError
+
+        const { error: deleteError } = await supabase
           .from('offers')
           .delete()
           .eq('id', offerId)
 
-        if (error) throw error
+        if (deleteError) throw deleteError
 
         queryClient.invalidateQueries({ queryKey: ['user-offers'] })
 
