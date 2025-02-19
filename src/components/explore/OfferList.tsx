@@ -26,18 +26,10 @@ const OfferList = () => {
     )
   }
 
-  // Sort offers by relevance_score if available (for recommended offers)
-  const sortedOffers = offers.sort((a, b) => {
-    if (a.relevance_score && b.relevance_score) {
-      return b.relevance_score - a.relevance_score
-    }
-    return 0
-  })
-
   return (
     <Suspense fallback={<OfferListSkeleton />}>
       <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {sortedOffers.map((offer) => (
+        {offers.map((offer) => (
           <OfferCard 
             key={offer.id} 
             offer={offer}
