@@ -32,7 +32,9 @@ const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps
     applyToOffer, 
     applications, 
     updateApplicationStatus,
-    userApplication 
+    userApplication,
+    isApplying,
+    isUpdating
   } = useApplicationManagement(offer.id)
 
   const { data: currentUser } = useQuery({
@@ -92,7 +94,7 @@ const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps
     return (
       <Button 
         onClick={() => applyToOffer(offer.id)}
-        disabled={offer.status !== 'available'}
+        disabled={offer.status !== 'available' || isApplying}
         className="w-full md:w-auto mt-4 md:mt-0 bg-teal hover:bg-teal/90 text-cream"
       >
         <Check className="h-4 w-4 mr-1" />
@@ -139,6 +141,7 @@ const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps
                           applicationId: application.id, 
                           status: 'accepted' 
                         })}
+                        disabled={isUpdating}
                         className="bg-teal hover:bg-teal/90 text-cream"
                       >
                         <Check className="h-4 w-4" />
@@ -150,6 +153,7 @@ const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps
                           applicationId: application.id, 
                           status: 'rejected' 
                         })}
+                        disabled={isUpdating}
                       >
                         <X className="h-4 w-4" />
                       </Button>

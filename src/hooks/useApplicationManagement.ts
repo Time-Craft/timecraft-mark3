@@ -23,17 +23,6 @@ export const useApplicationManagement = (offerId?: string) => {
           queryClient.invalidateQueries({ queryKey: ['user-application'] })
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles'
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['profile'] })
-        }
-      )
       .subscribe()
 
     return () => {
@@ -103,8 +92,10 @@ export const useApplicationManagement = (offerId?: string) => {
         title: "Success",
         description: "Application submitted successfully",
       })
+      queryClient.invalidateQueries({ queryKey: ['offer-applications'] })
+      queryClient.invalidateQueries({ queryKey: ['user-application'] })
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: "Failed to submit application: " + error.message,
@@ -135,7 +126,10 @@ export const useApplicationManagement = (offerId?: string) => {
         if (application) {
           const { error: offerError } = await supabase
             .from('offers')
-            .update({ status: 'booked' })
+            .update({ 
+              status: 'booked',
+              updated_at: new Date().toISOString()
+            })
             .eq('id', application.offer_id)
 
           if (offerError) throw offerError
@@ -147,8 +141,10 @@ export const useApplicationManagement = (offerId?: string) => {
         title: "Success",
         description: "Application status updated successfully",
       })
+      queryClient.invalidateQueries({ queryKey: ['offer-applications'] })
+      queryClient.invalidateQueries({ queryKey: ['offers'] })
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: "Failed to update application status: " + error.message,
