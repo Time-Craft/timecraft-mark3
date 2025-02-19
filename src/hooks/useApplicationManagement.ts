@@ -23,17 +23,6 @@ export const useApplicationManagement = (offerId?: string) => {
           queryClient.invalidateQueries({ queryKey: ['user-application'] })
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles'
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['profile'] })
-        }
-      )
       .subscribe()
 
     return () => {
@@ -83,38 +72,9 @@ export const useApplicationManagement = (offerId?: string) => {
     enabled: !!offerId
   })
 
-  const applyToOffer = useMutation({
-    mutationFn: async (offerId: string) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
-      const { error } = await supabase
-        .from('offer_applications')
-        .insert({
-          offer_id: offerId,
-          applicant_id: user.id,
-          status: 'pending'
-        })
-      
-      if (error) throw error
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Application submitted successfully",
-      })
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to submit application: " + error.message,
-        variant: "destructive",
-      })
-    }
-  })
-
   const updateApplicationStatus = useMutation({
     mutationFn: async ({ applicationId, status }: { applicationId: string, status: 'accepted' | 'rejected' }) => {
+      // First update the application status
       const { error: applicationError } = await supabase
         .from('offer_applications')
         .update({ 
@@ -125,6 +85,7 @@ export const useApplicationManagement = (offerId?: string) => {
       
       if (applicationError) throw applicationError
 
+      // If accepting, update the offer status to booked
       if (status === 'accepted') {
         const { data: application } = await supabase
           .from('offer_applications')
@@ -133,26 +94,68 @@ export const useApplicationManagement = (offerId?: string) => {
           .single()
 
         if (application) {
+          // Update other applications to rejected
+          await supabase
+            .from('offer_applications')
+            .update({ 
+              status: 'rejected',
+              updated_at: new Date().toISOString()
+            })
+            .eq('offer_id', application.offer_id)
+            .neq('id', applicationId)
+
+          // Update offer status to booked
           const { error: offerError } = await supabase
             .from('offers')
-            .update({ status: 'booked' })
+            .update({ 
+              status: 'booked',
+              updated_at: new Date().toISOString()
+            })
             .eq('id', application.offer_id)
 
           if (offerError) throw offerError
         }
       }
     },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Application status updated successfully",
+    onMutate: async ({ applicationId, status }) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ['offer-applications', offerId] })
+
+      // Snapshot the previous value
+      const previousApplications = queryClient.getQueryData(['offer-applications', offerId])
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['offer-applications', offerId], (old: any[] = []) => {
+        return old.map(app => {
+          if (app.id === applicationId) {
+            return { ...app, status }
+          }
+          // If accepting, reject all other applications
+          if (status === 'accepted') {
+            return { ...app, status: 'rejected' }
+          }
+          return app
+        })
       })
+
+      return { previousApplications }
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Revert back to the previous state if there's an error
+      queryClient.setQueryData(['offer-applications', offerId], context?.previousApplications)
       toast({
         title: "Error",
         description: "Failed to update application status: " + error.message,
         variant: "destructive",
+      })
+    },
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ['offer-applications', offerId] })
+      queryClient.invalidateQueries({ queryKey: ['offers'] })
+      toast({
+        title: "Success",
+        description: "Application status updated successfully",
       })
     }
   })
@@ -161,9 +164,7 @@ export const useApplicationManagement = (offerId?: string) => {
     applications,
     userApplication,
     isLoadingApplications,
-    applyToOffer: applyToOffer.mutate,
     updateApplicationStatus: updateApplicationStatus.mutate,
-    isApplying: applyToOffer.isPending,
     isUpdating: updateApplicationStatus.isPending
   }
 }
