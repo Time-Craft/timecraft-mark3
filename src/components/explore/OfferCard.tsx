@@ -5,7 +5,7 @@ import OfferHeader from "./OfferHeader"
 import OfferStatus from "./OfferStatus"
 import { Check, Hourglass, X, Trash2 } from "lucide-react"
 import { useApplicationManagement } from "@/hooks/useApplicationManagement"
-import { useQuery, useMutation } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -29,6 +29,7 @@ interface OfferCardProps {
 const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps) => {
   const { toast } = useToast()
   const { 
+    applyToOffer, 
     applications, 
     updateApplicationStatus,
     userApplication 
@@ -40,36 +41,6 @@ const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps
       const { data: { user }, error } = await supabase.auth.getUser()
       if (error) throw error
       return user
-    }
-  })
-
-  const applyToOffer = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
-      const { error } = await supabase
-        .from('offer_applications')
-        .insert({
-          offer_id: offer.id,
-          applicant_id: user.id,
-          status: 'pending'
-        })
-      
-      if (error) throw error
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Application submitted successfully",
-      })
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to submit application: " + error.message,
-        variant: "destructive",
-      })
     }
   })
 
@@ -120,8 +91,8 @@ const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps
 
     return (
       <Button 
-        onClick={() => applyToOffer.mutate()}
-        disabled={offer.status !== 'available' || applyToOffer.isPending}
+        onClick={() => applyToOffer(offer.id)}
+        disabled={offer.status !== 'available'}
         className="w-full md:w-auto mt-4 md:mt-0 bg-teal hover:bg-teal/90 text-cream"
       >
         <Check className="h-4 w-4 mr-1" />
