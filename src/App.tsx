@@ -1,4 +1,5 @@
-import React, { useEffect, useState, Suspense, useCallback } from "react"
+
+import React, { useEffect, useState, Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -6,11 +7,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { supabase } from "./integrations/supabase/client"
 import MainNav from "./components/MainNav"
+import Login from "./pages/Login" // Import Login directly
 
-// Lazy load route components
+// Lazy load other route components
 const Home = React.lazy(() => import("./pages/Home"))
 const Explore = React.lazy(() => import("./pages/Explore"))
-const Login = React.lazy(() => import("./pages/Login"))
 const Offer = React.lazy(() => import("./pages/Offer"))
 const Profile = React.lazy(() => import("./pages/Profile"))
 const Onboarding = React.lazy(() => import("./pages/Onboarding"))
@@ -168,28 +169,61 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           {session && <MainNav />}
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              {!session ? (
-                <Route path="*" element={<Login />} />
-              ) : isNewUser ? (
-                <>
-                  <Route path="/onboarding" element={<Onboarding setIsNewUser={setIsNewUser} />} />
-                  <Route path="*" element={<Navigate to="/onboarding" replace />} />
-                </>
-              ) : (
-                <>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/explore" element={<Explore />} />
-                  <Route path="/offer" element={<Offer />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/challenges" element={<Challenges />} />
-                  <Route path="/onboarding" element={<Onboarding setIsNewUser={setIsNewUser} />} />
-                  <Route path="*" element={<NotFound />} />
-                </>
-              )}
-            </Routes>
-          </Suspense>
+          <Routes>
+            {!session ? (
+              <>
+                <Route path="/login" element={<Login />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </>
+            ) : isNewUser ? (
+              <>
+                <Route path="/onboarding" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Onboarding setIsNewUser={setIsNewUser} />
+                  </Suspense>
+                } />
+                <Route path="*" element={<Navigate to="/onboarding" replace />} />
+              </>
+            ) : (
+              <>
+                <Route path="/" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Home />
+                  </Suspense>
+                } />
+                <Route path="/explore" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Explore />
+                  </Suspense>
+                } />
+                <Route path="/offer" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Offer />
+                  </Suspense>
+                } />
+                <Route path="/profile" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Profile />
+                  </Suspense>
+                } />
+                <Route path="/challenges" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Challenges />
+                  </Suspense>
+                } />
+                <Route path="/onboarding" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Onboarding setIsNewUser={setIsNewUser} />
+                  </Suspense>
+                } />
+                <Route path="*" element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <NotFound />
+                  </Suspense>
+                } />
+              </>
+            )}
+          </Routes>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
