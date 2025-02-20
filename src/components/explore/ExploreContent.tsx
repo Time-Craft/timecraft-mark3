@@ -1,20 +1,16 @@
 
+import { useState } from 'react'
 import OfferList from './OfferList'
 import MapView from './MapView'
 
 interface ExploreContentProps {
   view: 'list' | 'map'
-  offers: any[]
-  isLoading: boolean
-  searchQuery: string
-  setSearchQuery: (query: string) => void
-  acceptOffer: (offerId: string) => void
 }
 
-const ExploreContent = ({ view, ...exploreData }: ExploreContentProps) => {
+const ExploreContent = ({ view }: ExploreContentProps) => {
   return (
     <div className="w-full h-[calc(100vh-12rem)]">
-      {view === 'list' ? <OfferList {...exploreData} /> : <MapView />}
+      {view === 'list' ? <OfferList /> : <MapView />}
     </div>
   )
 }

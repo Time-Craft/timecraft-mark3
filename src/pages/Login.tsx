@@ -70,7 +70,7 @@ const Login = () => {
   return (
     <div className="container relative flex h-[100vh] flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
       <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex">
-        <div className="absolute inset-0 bg-teal opacity-30" />
+        <div className="absolute inset-0 z-0 bg-[url(/login-bg.png)] opacity-30" />
         <div className="relative z-10 mt-auto">
           <blockquote className="space-y-2">
             <p className="text-lg">

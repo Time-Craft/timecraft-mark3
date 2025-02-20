@@ -1,11 +1,7 @@
 
+import { useExploreOffers } from "@/hooks/useExploreOffers"
 import OfferCard from "./OfferCard"
-
-interface OfferListProps {
-  offers: any[]
-  isLoading: boolean
-  acceptOffer: (offerId: string) => void
-}
+import { Suspense } from "react"
 
 const OfferListSkeleton = () => (
   <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -15,29 +11,32 @@ const OfferListSkeleton = () => (
   </div>
 )
 
-const OfferList = ({ offers, isLoading, acceptOffer }: OfferListProps) => {
+const OfferList = () => {
+  const { offers, isLoading } = useExploreOffers()
+
   if (isLoading) {
     return <OfferListSkeleton />
   }
 
   if (!offers || offers.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <p>No offers found</p>
-        <p className="text-sm mt-2">Check back later for new opportunities</p>
+      <div className="text-center text-muted-foreground">
+        No offers found
       </div>
     )
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-      {offers.map((offer) => (
-        <OfferCard 
-          key={offer.id} 
-          offer={offer}
-        />
-      ))}
-    </div>
+    <Suspense fallback={<OfferListSkeleton />}>
+      <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {offers.map((offer) => (
+          <OfferCard 
+            key={offer.id} 
+            offer={offer}
+          />
+        ))}
+      </div>
+    </Suspense>
   )
 }
 
