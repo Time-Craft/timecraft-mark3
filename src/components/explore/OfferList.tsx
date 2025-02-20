@@ -14,29 +14,31 @@ const OfferListSkeleton = () => (
 const OfferList = () => {
   const { offers, isLoading } = useExploreOffers()
 
+  console.log("OfferList - offers:", offers)
+  console.log("OfferList - loading:", isLoading)
+
   if (isLoading) {
     return <OfferListSkeleton />
   }
 
   if (!offers || offers.length === 0) {
     return (
-      <div className="text-center text-muted-foreground">
-        No offers found
+      <div className="text-center py-8 text-muted-foreground">
+        <p>No offers found</p>
+        <p className="text-sm mt-2">Check back later for new opportunities</p>
       </div>
     )
   }
 
   return (
-    <Suspense fallback={<OfferListSkeleton />}>
-      <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {offers.map((offer) => (
-          <OfferCard 
-            key={offer.id} 
-            offer={offer}
-          />
-        ))}
-      </div>
-    </Suspense>
+    <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      {offers.map((offer) => (
+        <OfferCard 
+          key={offer.id} 
+          offer={offer}
+        />
+      ))}
+    </div>
   )
 }
 
