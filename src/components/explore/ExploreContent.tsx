@@ -1,21 +1,20 @@
 
 import OfferList from './OfferList'
 import MapView from './MapView'
-import { useExploreOffers } from '@/hooks/useExploreOffers'
 
 interface ExploreContentProps {
   view: 'list' | 'map'
+  offers: any[]
+  isLoading: boolean
+  searchQuery: string
+  setSearchQuery: (query: string) => void
+  acceptOffer: (offerId: string) => void
 }
 
-const ExploreContent = ({ view }: ExploreContentProps) => {
-  const { offers, isLoading } = useExploreOffers()
-  
-  console.log("ExploreContent - offers:", offers)
-  console.log("ExploreContent - loading:", isLoading)
-
+const ExploreContent = ({ view, ...exploreData }: ExploreContentProps) => {
   return (
     <div className="w-full h-[calc(100vh-12rem)]">
-      {view === 'list' ? <OfferList /> : <MapView />}
+      {view === 'list' ? <OfferList {...exploreData} /> : <MapView />}
     </div>
   )
 }

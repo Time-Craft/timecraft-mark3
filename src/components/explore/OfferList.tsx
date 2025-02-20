@@ -1,7 +1,11 @@
 
-import { useExploreOffers } from "@/hooks/useExploreOffers"
 import OfferCard from "./OfferCard"
-import { Suspense } from "react"
+
+interface OfferListProps {
+  offers: any[]
+  isLoading: boolean
+  acceptOffer: (offerId: string) => void
+}
 
 const OfferListSkeleton = () => (
   <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -11,12 +15,7 @@ const OfferListSkeleton = () => (
   </div>
 )
 
-const OfferList = () => {
-  const { offers, isLoading } = useExploreOffers()
-
-  console.log("OfferList - offers:", offers)
-  console.log("OfferList - loading:", isLoading)
-
+const OfferList = ({ offers, isLoading, acceptOffer }: OfferListProps) => {
   if (isLoading) {
     return <OfferListSkeleton />
   }
