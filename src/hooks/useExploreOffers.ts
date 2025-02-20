@@ -34,13 +34,18 @@ export const useExploreOffers = () => {
         const { data: user } = await supabase.auth.getUser()
         if (!user.user) throw new Error('User not authenticated')
 
+        console.log('Fetching recommended offers for user:', user.user.id)
         const { data, error } = await supabase
           .rpc('get_recommended_offers', {
             user_id: user.user.id
           })
 
-        if (error) throw error
+        if (error) {
+          console.error('Error fetching recommendations:', error)
+          throw error
+        }
 
+        console.log('Received recommended offers:', data)
         // Map the recommended offers to match our interface
         return data.map(offer => ({
           id: offer.id,
