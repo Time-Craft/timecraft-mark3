@@ -182,6 +182,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_stats: {
+        Row: {
+          average_rating: number | null
+          community_rank: number | null
+          created_at: string
+          hours_exchanged: number
+          time_balance: number
+          total_exchanges: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          average_rating?: number | null
+          community_rank?: number | null
+          created_at?: string
+          hours_exchanged?: number
+          time_balance?: number
+          total_exchanges?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          average_rating?: number | null
+          community_rank?: number | null
+          created_at?: string
+          hours_exchanged?: number
+          time_balance?: number
+          total_exchanges?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
