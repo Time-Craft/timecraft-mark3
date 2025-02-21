@@ -3,10 +3,37 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useOfferManagement } from "@/hooks/useOfferManagement"
-import ServiceTypeSelect from "@/components/offer/ServiceTypeSelect"
-import DateDurationSelect from "@/components/offer/DateDurationSelect"
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from "@/components/ui/select"
+import { Calendar } from "@/components/ui/calendar"
+import { Calendar as CalendarIcon, CreditCard } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Slider } from "@/components/ui/slider"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
+
+const serviceCategories = [
+  "Programming",
+  "Teaching",
+  "Gardening",
+  "Design",
+  "Writing",
+  "Marketing",
+  "Translation",
+  "Consulting",
+  "Photography",
+  "Music",
+  "Cooking",
+  "Fitness"
+]
 
 const Offer = () => {
   const navigate = useNavigate()
@@ -24,7 +51,7 @@ const Offer = () => {
     const finalServiceType = serviceType === "Others" ? otherServiceType : serviceType
     
     await createOffer({
-      title: finalServiceType,
+      title: finalServiceType, // Using service type as title since it's required in DB
       description,
       hours: timeCredits[0],
       serviceType: finalServiceType,
@@ -45,12 +72,34 @@ const Offer = () => {
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <ServiceTypeSelect
-              value={serviceType}
-              onValueChange={setServiceType}
-              otherServiceType={otherServiceType}
-              onOtherServiceTypeChange={setOtherServiceType}
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Service Type</label>
+              <Select 
+                value={serviceType} 
+                onValueChange={setServiceType}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a service type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {serviceCategories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {serviceType === "Others" && (
+                <Input
+                  value={otherServiceType}
+                  onChange={(e) => setOtherServiceType(e.target.value)}
+                  placeholder="Please specify the service type"
+                  className="mt-2"
+                  required
+                />
+              )}
+            </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Description</label>
@@ -62,14 +111,78 @@ const Offer = () => {
               />
             </div>
 
-            <DateDurationSelect
-              date={date}
-              onDateChange={setDate}
-              duration={duration}
-              onDurationChange={setDuration}
-              timeCredits={timeCredits}
-              onTimeCreditsChange={setTimeCredits}
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="space-y-2 flex-1">
+                <label className="text-sm font-medium">Duration (hours)</label>
+                <Input 
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                  placeholder="e.g., 1.5"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2 flex-1">
+                <label className="text-sm font-medium">Time Credits</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start font-normal"
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      {timeCredits[0]} Credit{timeCredits[0] !== 1 ? 's' : ''}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-4">
+                      <h4 className="font-medium">Select Time Credits</h4>
+                      <Slider
+                        value={timeCredits}
+                        onValueChange={setTimeCredits}
+                        min={1}
+                        max={5}
+                        step={1}
+                        className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>1 Credit</span>
+                        <span>5 Credits</span>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
             
             <div className="flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={() => navigate('/profile')}>
