@@ -55,7 +55,7 @@ const StatsCards = () => {
     },
     {
       title: "Average Rating",
-      value: stats?.average_rating?.toString() || "0.0",
+      value: stats?.average_rating?.toFixed(1).toString() || "0.0",
       description: "Out of 5 stars"
     },
     {

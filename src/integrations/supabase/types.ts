@@ -184,30 +184,36 @@ export type Database = {
       }
       user_stats: {
         Row: {
+          active_offers: number | null
           average_rating: number | null
           community_rank: number | null
           created_at: string
           hours_exchanged: number
+          most_offered_service: string | null
           time_balance: number
           total_exchanges: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          active_offers?: number | null
           average_rating?: number | null
           community_rank?: number | null
           created_at?: string
           hours_exchanged?: number
+          most_offered_service?: string | null
           time_balance?: number
           total_exchanges?: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          active_offers?: number | null
           average_rating?: number | null
           community_rank?: number | null
           created_at?: string
           hours_exchanged?: number
+          most_offered_service?: string | null
           time_balance?: number
           total_exchanges?: number
           updated_at?: string
