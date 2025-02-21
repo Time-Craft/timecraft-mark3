@@ -56,7 +56,10 @@ const QuickStats = () => {
           <Clock className="h-4 w-4 text-teal" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-navy">{stats?.time_balance || 0} hours</div>
+          <div className="text-2xl font-bold text-navy">{stats?.time_balance || 30} hours</div>
+          {stats?.buffer_credits > 0 && (
+            <p className="text-xs text-teal mt-1">({stats.buffer_credits} hours in escrow)</p>
+          )}
         </CardContent>
       </Card>
       
@@ -67,6 +70,7 @@ const QuickStats = () => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-navy">{stats?.active_offers || 0}</div>
+          <p className="text-xs text-teal mt-1">Available for exchange</p>
         </CardContent>
       </Card>
       
