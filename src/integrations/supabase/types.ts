@@ -186,6 +186,7 @@ export type Database = {
         Row: {
           active_offers: number | null
           average_rating: number | null
+          buffer_credits: number
           community_rank: number | null
           created_at: string
           hours_exchanged: number
@@ -198,6 +199,7 @@ export type Database = {
         Insert: {
           active_offers?: number | null
           average_rating?: number | null
+          buffer_credits?: number
           community_rank?: number | null
           created_at?: string
           hours_exchanged?: number
@@ -210,6 +212,7 @@ export type Database = {
         Update: {
           active_offers?: number | null
           average_rating?: number | null
+          buffer_credits?: number
           community_rank?: number | null
           created_at?: string
           hours_exchanged?: number
