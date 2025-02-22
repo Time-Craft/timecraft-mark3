@@ -6,6 +6,20 @@ import { supabase } from "@/integrations/supabase/client"
 import { useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 
+interface UserStats {
+  active_offers: number | null
+  average_rating: number | null
+  community_rank: number | null
+  created_at: string
+  hours_exchanged: number
+  most_offered_service: string | null
+  time_balance: number
+  buffer_credits: number
+  total_exchanges: number
+  updated_at: string
+  user_id: string
+}
+
 const QuickStats = () => {
   const queryClient = useQueryClient()
 
@@ -31,7 +45,7 @@ const QuickStats = () => {
     }
   }, [queryClient])
 
-  const { data: stats } = useQuery({
+  const { data: stats } = useQuery<UserStats>({
     queryKey: ['user-stats'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -88,3 +102,4 @@ const QuickStats = () => {
 }
 
 export default QuickStats
+
