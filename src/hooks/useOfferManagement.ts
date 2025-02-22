@@ -17,6 +17,7 @@ export const useOfferManagement = () => {
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
+  // Real-time subscription for offer changes
   useEffect(() => {
     const channel = supabase
       .channel('offer-management')
@@ -31,7 +32,6 @@ export const useOfferManagement = () => {
           console.log('Offer change detected:', payload)
           queryClient.invalidateQueries({ queryKey: ['offers'] })
           queryClient.invalidateQueries({ queryKey: ['user-offers'] })
-          queryClient.invalidateQueries({ queryKey: ['user-stats'] })
         }
       )
       .subscribe()
@@ -45,19 +45,6 @@ export const useOfferManagement = () => {
     mutationFn: async (offer: OfferInput) => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
-
-      // Check user's time balance before creating offer
-      const { data: userStats, error: statsError } = await supabase
-        .from('user_stats')
-        .select('time_balance')
-        .eq('user_id', user.id)
-        .single()
-
-      if (statsError) throw statsError
-
-      if (!userStats || userStats.time_balance < offer.hours) {
-        throw new Error('Insufficient time credits')
-      }
 
       const { error } = await supabase
         .from('offers')
@@ -80,9 +67,9 @@ export const useOfferManagement = () => {
         title: "Success",
         description: "Offer created successfully",
       })
+      // Invalidate both queries
       queryClient.invalidateQueries({ queryKey: ['user-offers'] })
       queryClient.invalidateQueries({ queryKey: ['offers'] })
-      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
     },
     onError: (error) => {
       toast({

@@ -6,20 +6,6 @@ import { supabase } from "@/integrations/supabase/client"
 import { useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 
-interface UserStats {
-  active_offers: number | null
-  average_rating: number | null
-  community_rank: number | null
-  created_at: string
-  hours_exchanged: number
-  most_offered_service: string | null
-  time_balance: number
-  buffer_credits: number
-  total_exchanges: number
-  updated_at: string
-  user_id: string
-}
-
 const QuickStats = () => {
   const queryClient = useQueryClient()
 
@@ -45,7 +31,7 @@ const QuickStats = () => {
     }
   }, [queryClient])
 
-  const { data: stats } = useQuery<UserStats>({
+  const { data: stats } = useQuery({
     queryKey: ['user-stats'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -70,10 +56,7 @@ const QuickStats = () => {
           <Clock className="h-4 w-4 text-teal" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-navy">{stats?.time_balance || 30} hours</div>
-          {stats?.buffer_credits > 0 && (
-            <p className="text-xs text-teal mt-1">({stats.buffer_credits} hours in escrow)</p>
-          )}
+          <div className="text-2xl font-bold text-navy">{stats?.time_balance || 0} hours</div>
         </CardContent>
       </Card>
       
@@ -84,7 +67,6 @@ const QuickStats = () => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-navy">{stats?.active_offers || 0}</div>
-          <p className="text-xs text-teal mt-1">Available for exchange</p>
         </CardContent>
       </Card>
       
@@ -102,4 +84,3 @@ const QuickStats = () => {
 }
 
 export default QuickStats
-
