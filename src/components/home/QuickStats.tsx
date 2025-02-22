@@ -9,7 +9,6 @@ import { useQueryClient } from "@tanstack/react-query"
 const QuickStats = () => {
   const queryClient = useQueryClient()
 
-  // Set up real-time subscription for user stats changes
   useEffect(() => {
     const channel = supabase
       .channel('user-stats-changes')
@@ -21,8 +20,7 @@ const QuickStats = () => {
           table: 'user_stats',
           filter: `user_id=eq.${supabase.auth.getUser().then(({ data }) => data.user?.id)}`
         },
-        (payload) => {
-          console.log('Stats update received:', payload)
+        () => {
           queryClient.invalidateQueries({ queryKey: ['user-stats'] })
         }
       )
