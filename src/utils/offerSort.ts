@@ -13,6 +13,7 @@ interface Offer {
   description: string
   service_type: string
   status: string
+  hours: number  // Added hours property to fix type error
   accepted_by?: string[]
   user: {
     id: string
