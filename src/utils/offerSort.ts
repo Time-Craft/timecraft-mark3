@@ -12,6 +12,7 @@ interface Offer {
   title: string
   description: string
   service_type: string
+  status: string
   accepted_by?: string[]
   user: {
     id: string
@@ -67,8 +68,20 @@ export const sortOffersByRelevance = (
   if (!userServices.length) return offers
 
   return [...offers].sort((a, b) => {
+    // First, prioritize available offers over other statuses
+    if (a.status === 'available' && b.status !== 'available') {
+      return -1;
+    }
+    if (a.status !== 'available' && b.status === 'available') {
+      return 1;
+    }
+    
+    // If both offers have the same status (either both available or both not available),
+    // then sort by relevance score
     const scoreA = calculateOfferScore(a, userServices)
     const scoreB = calculateOfferScore(b, userServices)
+    
+    // Sort by score in descending order
     return scoreB - scoreA
   })
 }

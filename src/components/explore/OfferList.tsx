@@ -58,10 +58,23 @@ const OfferList = ({ sortByRelevance = false }: OfferListProps) => {
     )
   }
 
+  // Filter out offers created by the current user
+  const filteredOffers = offers.filter(offer => 
+    offer.user.id !== userProfile?.id
+  )
+
+  if (filteredOffers.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground">
+        No offers found from other users
+      </div>
+    )
+  }
+
   // Apply sorting if enabled and user has services
   const displayedOffers = sortByRelevance && userProfile?.services
-    ? sortOffersByRelevance(offers, userProfile.services)
-    : offers
+    ? sortOffersByRelevance(filteredOffers, userProfile.services)
+    : filteredOffers
 
   return (
     <Suspense fallback={<OfferListSkeleton />}>
