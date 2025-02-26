@@ -14,7 +14,7 @@ const Explore = () => {
       <div className="flex items-center justify-between mb-6">
         <ExploreHeader view={view} onViewChange={setView} />
         <Button
-          variant="outline"
+          variant={sortByRelevance ? "default" : "outline"}
           onClick={() => setSortByRelevance(!sortByRelevance)}
           className="ml-4"
         >
