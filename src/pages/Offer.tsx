@@ -73,7 +73,7 @@ const Offer = () => {
     
     const finalServiceType = serviceType === "Others" ? otherServiceType : serviceType
     
-    // Check if user has enough credits
+    // Check if user has enough credits for this specific request
     if ((timeBalance?.balance || 0) < timeCredits[0]) {
       toast({
         title: "Insufficient Credits",
@@ -96,6 +96,12 @@ const Offer = () => {
     navigate('/profile')
   }
 
+  // Determine if the user has any credits left
+  const hasNoCredits = (timeBalance?.balance || 0) <= 0
+
+  // Determine the maximum credits available (either 5 or the user's balance, whichever is smaller)
+  const maxCredits = Math.min(5, timeBalance?.balance || 0)
+
   return (
     <div className="container mx-auto p-4 max-w-2xl">
       <h1 className="text-2xl md:text-4xl font-bold mb-6">Create New Request</h1>
@@ -106,12 +112,12 @@ const Offer = () => {
             <CardTitle>Request Details</CardTitle>
             <div className="flex items-center space-x-2">
               <CreditCard className="h-4 w-4 text-teal" />
-              <span className="text-sm font-medium">Available: {timeBalance?.balance || 30} credits</span>
+              <span className="text-sm font-medium">Available: {timeBalance?.balance || 0} credits</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {(timeBalance?.balance || 30) < 1 && (
+          {hasNoCredits && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Warning</AlertTitle>
@@ -208,6 +214,7 @@ const Offer = () => {
                     <Button
                       variant="outline"
                       className="w-full justify-start font-normal"
+                      disabled={hasNoCredits}
                     >
                       <CreditCard className="mr-2 h-4 w-4" />
                       {timeCredits[0]} Credit{timeCredits[0] !== 1 ? 's' : ''}
@@ -220,19 +227,20 @@ const Offer = () => {
                         value={timeCredits}
                         onValueChange={setTimeCredits}
                         min={1}
-                        max={5}
+                        max={maxCredits > 0 ? maxCredits : 1}
                         step={1}
                         className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
+                        disabled={hasNoCredits}
                       />
                       <div className="flex justify-between">
                         <span className="text-xs text-muted-foreground">1 Credit</span>
-                        <span className="text-xs text-muted-foreground">5 Credits</span>
+                        <span className="text-xs text-muted-foreground">{maxCredits > 0 ? maxCredits : 1} Credits</span>
                       </div>
                       <div className="mt-2 text-center text-sm text-muted-foreground">
-                        {timeBalance && timeCredits[0] > timeBalance.balance ? (
+                        {timeCredits[0] > (timeBalance?.balance || 0) ? (
                           <span className="text-destructive">Insufficient credits!</span>
                         ) : (
-                          <span>You have {timeBalance?.balance || 30} credits available</span>
+                          <span>You have {timeBalance?.balance || 0} credits available</span>
                         )}
                       </div>
                     </div>
@@ -247,7 +255,7 @@ const Offer = () => {
               </Button>
               <Button 
                 type="submit" 
-                disabled={isCreating || !timeBalance || timeCredits[0] > timeBalance.balance}
+                disabled={isCreating || timeCredits[0] > (timeBalance?.balance || 0) || hasNoCredits}
                 className="bg-teal hover:bg-teal/90 text-cream"
               >
                 {isCreating ? "Creating..." : "Create Request"}
