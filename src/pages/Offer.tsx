@@ -14,11 +14,15 @@ import {
   SelectValue 
 } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
-import { Calendar as CalendarIcon, CreditCard } from "lucide-react"
+import { Calendar as CalendarIcon, CreditCard, AlertCircle } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { useQuery } from "@tanstack/react-query"
+import { supabase } from "@/integrations/supabase/client"
+import { useToast } from "@/components/ui/use-toast"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 const serviceCategories = [
   "Programming",
@@ -44,11 +48,40 @@ const Offer = () => {
   const [date, setDate] = useState<Date>()
   const [duration, setDuration] = useState("")
   const [timeCredits, setTimeCredits] = useState([1])
+  const { toast } = useToast()
+
+  // Get time balance from the time_balances table
+  const { data: timeBalance } = useQuery({
+    queryKey: ['time-balance'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("No user found")
+
+      const { data, error } = await supabase
+        .from('time_balances')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single()
+
+      if (error) throw error
+      return data
+    }
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     const finalServiceType = serviceType === "Others" ? otherServiceType : serviceType
+    
+    // Check if user has enough credits
+    if ((timeBalance?.balance || 0) < timeCredits[0]) {
+      toast({
+        title: "Insufficient Credits",
+        description: `You only have ${timeBalance?.balance || 0} credits, but this offer requires ${timeCredits[0]}.`,
+        variant: "destructive"
+      })
+      return
+    }
     
     await createOffer({
       title: finalServiceType, // Using service type as title since it's required in DB
@@ -69,9 +102,25 @@ const Offer = () => {
       
       <Card>
         <CardHeader>
-          <CardTitle>Offer Details</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Offer Details</CardTitle>
+            <div className="flex items-center space-x-2">
+              <CreditCard className="h-4 w-4 text-teal" />
+              <span className="text-sm font-medium">Available: {timeBalance?.balance || 30} credits</span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
+          {(timeBalance?.balance || 30) < 1 && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Warning</AlertTitle>
+              <AlertDescription>
+                You don't have enough credits to create an offer.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <label className="text-sm font-medium">Service Type</label>
@@ -175,9 +224,16 @@ const Offer = () => {
                         step={1}
                         className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
                       />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>1 Credit</span>
-                        <span>5 Credits</span>
+                      <div className="flex justify-between">
+                        <span className="text-xs text-muted-foreground">1 Credit</span>
+                        <span className="text-xs text-muted-foreground">5 Credits</span>
+                      </div>
+                      <div className="mt-2 text-center text-sm text-muted-foreground">
+                        {timeBalance && timeCredits[0] > timeBalance.balance ? (
+                          <span className="text-destructive">Insufficient credits!</span>
+                        ) : (
+                          <span>You have {timeBalance?.balance || 30} credits available</span>
+                        )}
                       </div>
                     </div>
                   </PopoverContent>
@@ -191,7 +247,7 @@ const Offer = () => {
               </Button>
               <Button 
                 type="submit" 
-                disabled={isCreating}
+                disabled={isCreating || !timeBalance || timeCredits[0] > timeBalance.balance}
                 className="bg-teal hover:bg-teal/90 text-cream"
               >
                 {isCreating ? "Creating..." : "Create Offer"}
