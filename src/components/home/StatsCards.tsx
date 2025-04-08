@@ -59,7 +59,7 @@ const StatsCards = () => {
       description: "Out of 5 stars"
     },
     {
-      title: "Most Offered",
+      title: "Most Requested",
       value: stats?.most_offered_service || "N/A",
       description: "Your top service"
     },

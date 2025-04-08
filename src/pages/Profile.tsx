@@ -139,10 +139,10 @@ const Profile = () => {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>My Offers</CardTitle>
+            <CardTitle>My Requests</CardTitle>
             <Button size="sm" onClick={() => navigate('/offer')}>
               <Plus className="h-4 w-4 mr-1" />
-              New Offer
+              New Request
             </Button>
           </div>
         </CardHeader>
@@ -150,7 +150,7 @@ const Profile = () => {
           <div className="space-y-4">
             {userOffers?.length === 0 ? (
               <p className="text-center text-muted-foreground">
-                You haven't created any offers yet
+                You haven't created any requests yet
               </p>
             ) : (
               userOffers?.map((offer) => (

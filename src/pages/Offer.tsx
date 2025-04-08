@@ -77,7 +77,7 @@ const Offer = () => {
     if ((timeBalance?.balance || 0) < timeCredits[0]) {
       toast({
         title: "Insufficient Credits",
-        description: `You only have ${timeBalance?.balance || 0} credits, but this offer requires ${timeCredits[0]}.`,
+        description: `You only have ${timeBalance?.balance || 0} credits, but this request requires ${timeCredits[0]}.`,
         variant: "destructive"
       })
       return
@@ -98,12 +98,12 @@ const Offer = () => {
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
-      <h1 className="text-2xl md:text-4xl font-bold mb-6">Create New Offer</h1>
+      <h1 className="text-2xl md:text-4xl font-bold mb-6">Create New Request</h1>
       
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Offer Details</CardTitle>
+            <CardTitle>Request Details</CardTitle>
             <div className="flex items-center space-x-2">
               <CreditCard className="h-4 w-4 text-teal" />
               <span className="text-sm font-medium">Available: {timeBalance?.balance || 30} credits</span>
@@ -116,7 +116,7 @@ const Offer = () => {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Warning</AlertTitle>
               <AlertDescription>
-                You don't have enough credits to create an offer.
+                You don't have enough credits to create a request.
               </AlertDescription>
             </Alert>
           )}
@@ -156,7 +156,7 @@ const Offer = () => {
               <Textarea 
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe your service offer in detail..."
+                placeholder="Describe your service request in detail..."
                 required
               />
             </div>
@@ -250,7 +250,7 @@ const Offer = () => {
                 disabled={isCreating || !timeBalance || timeCredits[0] > timeBalance.balance}
                 className="bg-teal hover:bg-teal/90 text-cream"
               >
-                {isCreating ? "Creating..." : "Create Offer"}
+                {isCreating ? "Creating..." : "Create Request"}
               </Button>
             </div>
           </form>

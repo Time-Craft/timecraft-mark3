@@ -103,7 +103,7 @@ const QuickStats = () => {
       
       <Card className="gradient-border card-hover">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-navy">Active Offers</CardTitle>
+          <CardTitle className="text-sm font-medium text-navy">Active Requests</CardTitle>
           <List className="h-4 w-4 text-teal" />
         </CardHeader>
         <CardContent>

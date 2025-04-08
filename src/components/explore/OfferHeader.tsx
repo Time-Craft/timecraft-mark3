@@ -10,7 +10,7 @@ interface OfferHeaderProps {
   }
   title: string
   hours: number
-  timeCredits?: number // Add optional timeCredits property
+  timeCredits?: number 
 }
 
 const OfferHeader = ({ user, title, hours, timeCredits }: OfferHeaderProps) => {
