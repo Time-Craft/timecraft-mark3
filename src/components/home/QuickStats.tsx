@@ -39,9 +39,9 @@ const QuickStats = () => {
           table: 'time_balances',
           filter: `user_id=eq.${userId}`
         },
-        (payload) => {
-          console.log('Time balance update received:', payload)
-          queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+        () => {
+          console.log('Time balance update received')
+          queryClient.invalidateQueries({ queryKey: ['time-balance', userId] })
         }
       )
       .subscribe()
@@ -57,27 +57,10 @@ const QuickStats = () => {
           table: 'offers',
           filter: `profile_id=eq.${userId}`
         },
-        (payload) => {
-          console.log('Offers update received:', payload)
-          queryClient.invalidateQueries({ queryKey: ['user-stats'] })
-          queryClient.invalidateQueries({ queryKey: ['time-balance'] })
-        }
-      )
-      .subscribe()
-
-    // Also subscribe to user_stats changes
-    const userStatsChannel = supabase
-      .channel('user-stats-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_stats',
-          filter: `user_id=eq.${userId}`
-        },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+          console.log('Offers update received')
+          queryClient.invalidateQueries({ queryKey: ['user-stats', userId] })
+          queryClient.invalidateQueries({ queryKey: ['time-balance', userId] })
         }
       )
       .subscribe()
@@ -85,7 +68,6 @@ const QuickStats = () => {
     return () => {
       supabase.removeChannel(timeBalanceChannel)
       supabase.removeChannel(offersChannel)
-      supabase.removeChannel(userStatsChannel)
     }
   }, [queryClient, userId])
 
@@ -141,7 +123,7 @@ const QuickStats = () => {
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="text-2xl font-bold text-navy">
-              {timeBalanceLoading || !userId ? (
+              {timeBalanceLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
                 `${timeBalance?.balance || 0} credits`
@@ -159,7 +141,7 @@ const QuickStats = () => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-navy">
-            {statsLoading || !userId ? (
+            {statsLoading ? (
               <Skeleton className="h-8 w-20" />
             ) : (
               stats?.active_offers || 0
@@ -175,7 +157,7 @@ const QuickStats = () => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-navy">
-            {statsLoading || !userId ? (
+            {statsLoading ? (
               <Skeleton className="h-8 w-20" />
             ) : (
               stats?.hours_exchanged || 0

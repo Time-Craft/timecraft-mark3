@@ -37,7 +37,7 @@ const StatsCards = () => {
           filter: `user_id=eq.${userId}`
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+          queryClient.invalidateQueries({ queryKey: ['user-stats', userId] })
         }
       )
       .subscribe()
