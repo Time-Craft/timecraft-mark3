@@ -42,12 +42,31 @@ const StatsCards = () => {
       )
       .subscribe()
 
+    // Time balance subscription
+    const timeBalanceChannel = supabase
+      .channel('stats-time-balance-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'time_balances',
+          filter: `user_id=eq.${userId}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['time-balance', userId] })
+          queryClient.invalidateQueries({ queryKey: ['user-stats', userId] })
+        }
+      )
+      .subscribe()
+
     return () => {
       supabase.removeChannel(channel)
+      supabase.removeChannel(timeBalanceChannel)
     }
   }, [queryClient, userId])
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['user-stats', userId],
     queryFn: async () => {
       if (!userId) return null
@@ -63,6 +82,27 @@ const StatsCards = () => {
     },
     enabled: !!userId // Only run query when userId is available
   })
+
+  // Get time balance from the time_balances table
+  const { data: timeBalance, isLoading: timeBalanceLoading } = useQuery({
+    queryKey: ['time-balance', userId],
+    queryFn: async () => {
+      if (!userId) return null
+      
+      const { data, error } = await supabase
+        .from('time_balances')
+        .select('balance')
+        .eq('user_id', userId)
+        .single()
+
+      if (error) throw error
+      
+      return data
+    },
+    enabled: !!userId // Only run query when userId is available
+  })
+
+  const isLoading = statsLoading || timeBalanceLoading
 
   const statsData = [
     {

@@ -76,6 +76,7 @@ export const useOfferManagement = () => {
         
       if (timeBalanceError) throw timeBalanceError
       
+      // Each time_credit costs 1 balance point
       if (timeBalanceData.balance < offer.timeCredits) {
         throw new Error(`Insufficient credits. You need ${offer.timeCredits} but only have ${timeBalanceData.balance}.`)
       }
@@ -99,11 +100,11 @@ export const useOfferManagement = () => {
       
       if (error) throw error
 
-      // Manually update the time balance (this will be redundant if there's a DB trigger but ensures consistency)
+      // Update the time balance (deduct 1 point per time_credit)
       const { error: updateError } = await supabase
         .from('time_balances')
         .update({ 
-          balance: timeBalanceData.balance - offer.timeCredits,
+          balance: timeBalanceData.balance - offer.timeCredits, // Deduct exactly the number of timeCredits
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)
