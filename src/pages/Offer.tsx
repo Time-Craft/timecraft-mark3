@@ -51,7 +51,7 @@ const Offer = () => {
   const { toast } = useToast()
 
   // Get time balance from the time_balances table
-  const { data: timeBalance } = useQuery({
+  const { data: timeBalance, isLoading: timeBalanceLoading } = useQuery({
     queryKey: ['time-balance'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -112,7 +112,9 @@ const Offer = () => {
             <CardTitle>Request Details</CardTitle>
             <div className="flex items-center space-x-2">
               <CreditCard className="h-4 w-4 text-teal" />
-              <span className="text-sm font-medium">Available: {timeBalance?.balance || 0} credits</span>
+              <span className="text-sm font-medium">
+                {timeBalanceLoading ? "Loading..." : `Available: ${timeBalance?.balance || 0} credits`}
+              </span>
             </div>
           </div>
         </CardHeader>

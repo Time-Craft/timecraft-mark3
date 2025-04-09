@@ -69,7 +69,7 @@ const QuickStats = () => {
   })
 
   // Get time balance from the time_balances table
-  const { data: timeBalance } = useQuery({
+  const { data: timeBalance, isLoading: timeBalanceLoading } = useQuery({
     queryKey: ['time-balance'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -95,7 +95,9 @@ const QuickStats = () => {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
-            <div className="text-2xl font-bold text-navy">{timeBalance?.balance || 30} credits</div>
+            <div className="text-2xl font-bold text-navy">
+              {timeBalanceLoading ? "Loading..." : `${timeBalance?.balance || 0} credits`}
+            </div>
             <Badge variant="outline" className="bg-teal/10 text-teal">Available</Badge>
           </div>
         </CardContent>
