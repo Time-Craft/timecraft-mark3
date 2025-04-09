@@ -3,14 +3,31 @@ import { useQuery } from "@tanstack/react-query"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Clock, ChartBar, List } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const QuickStats = () => {
   const queryClient = useQueryClient()
-
+  const [userId, setUserId] = useState<string | null>(null)
+  
+  // First fetch the user ID
   useEffect(() => {
+    const fetchUserId = async () => {
+      const { data } = await supabase.auth.getUser()
+      if (data?.user?.id) {
+        setUserId(data.user.id)
+      }
+    }
+    
+    fetchUserId()
+  }, [])
+
+  // Set up real-time listeners only when we have a user ID
+  useEffect(() => {
+    if (!userId) return
+    
     // Set up real-time listener for time balances changes
     const timeBalanceChannel = supabase
       .channel('time-balance-changes')
@@ -19,7 +36,8 @@ const QuickStats = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'time_balances'
+          table: 'time_balances',
+          filter: `user_id=eq.${userId}`
         },
         (payload) => {
           console.log('Time balance update received:', payload)
@@ -36,7 +54,8 @@ const QuickStats = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'offers'
+          table: 'offers',
+          filter: `profile_id=eq.${userId}`
         },
         (payload) => {
           console.log('Offers update received:', payload)
@@ -54,7 +73,8 @@ const QuickStats = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'user_stats'
+          table: 'user_stats',
+          filter: `user_id=eq.${userId}`
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['user-stats'] })
@@ -67,38 +87,37 @@ const QuickStats = () => {
       supabase.removeChannel(offersChannel)
       supabase.removeChannel(userStatsChannel)
     }
-  }, [queryClient])
+  }, [queryClient, userId])
 
   // Get user stats from the database
-  const { data: stats } = useQuery({
-    queryKey: ['user-stats'],
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['user-stats', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No user found")
-
+      if (!userId) return null
+      
       const { data, error } = await supabase
         .from('user_stats')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single()
 
       if (error) throw error
       return data
-    }
+    },
+    enabled: !!userId // Only run query when userId is available
   })
 
   // Get time balance from the time_balances table
   const { data: timeBalance, isLoading: timeBalanceLoading } = useQuery({
-    queryKey: ['time-balance'],
+    queryKey: ['time-balance', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No user found")
-
-      console.log('Fetching time balance for user:', user.id)
+      if (!userId) return null
+      
+      console.log('Fetching time balance for user:', userId)
       const { data, error } = await supabase
         .from('time_balances')
         .select('balance')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single()
 
       if (error) {
@@ -108,7 +127,8 @@ const QuickStats = () => {
       
       console.log('Time balance data:', data)
       return data
-    }
+    },
+    enabled: !!userId // Only run query when userId is available
   })
 
   return (
@@ -121,7 +141,11 @@ const QuickStats = () => {
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="text-2xl font-bold text-navy">
-              {timeBalanceLoading ? "Loading..." : `${timeBalance?.balance || 0} credits`}
+              {timeBalanceLoading || !userId ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                `${timeBalance?.balance || 0} credits`
+              )}
             </div>
             <Badge variant="outline" className="bg-teal/10 text-teal">Available</Badge>
           </div>
@@ -134,7 +158,13 @@ const QuickStats = () => {
           <List className="h-4 w-4 text-teal" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-navy">{stats?.active_offers || 0}</div>
+          <div className="text-2xl font-bold text-navy">
+            {statsLoading || !userId ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              stats?.active_offers || 0
+            )}
+          </div>
         </CardContent>
       </Card>
       
@@ -144,7 +174,13 @@ const QuickStats = () => {
           <ChartBar className="h-4 w-4 text-teal" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-navy">{stats?.hours_exchanged || 0}</div>
+          <div className="text-2xl font-bold text-navy">
+            {statsLoading || !userId ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              stats?.hours_exchanged || 0
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
