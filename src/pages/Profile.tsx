@@ -33,8 +33,26 @@ const Profile = () => {
       )
       .subscribe()
 
+    // Add subscription to time_balances table
+    const timeBalanceChannel = supabase
+      .channel('profile-time-balance-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'time_balances'
+        },
+        (payload) => {
+          console.log('Time balance update received on profile page:', payload)
+          queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+        }
+      )
+      .subscribe()
+
     return () => {
       supabase.removeChannel(channel)
+      supabase.removeChannel(timeBalanceChannel)
     }
   }, [queryClient])
 
@@ -51,6 +69,30 @@ const Profile = () => {
         .single()
 
       if (error) throw error
+      return data
+    }
+  })
+
+  // Add query to fetch time balance
+  const { data: timeBalance, isLoading: timeBalanceLoading } = useQuery({
+    queryKey: ['time-balance'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("No user found")
+
+      console.log('Fetching time balance for user on Profile page:', user.id)
+      const { data, error } = await supabase
+        .from('time_balances')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single()
+
+      if (error) {
+        console.error('Error fetching time balance on Profile page:', error)
+        throw error
+      }
+      
+      console.log('Time balance data on Profile page:', data)
       return data
     }
   })
@@ -96,9 +138,16 @@ const Profile = () => {
     <div className="container mx-auto p-4 space-y-6 max-w-2xl">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl md:text-4xl font-bold">Profile</h1>
-        <Button variant="outline" onClick={handleLogout}>
-          Logout
-        </Button>
+        <div className="flex items-center gap-4">
+          {!timeBalanceLoading && (
+            <div className="text-sm font-medium">
+              <span className="text-teal">{timeBalance?.balance || 0}</span> credits available
+            </div>
+          )}
+          <Button variant="outline" onClick={handleLogout}>
+            Logout
+          </Button>
+        </div>
       </div>
       
       <Card>

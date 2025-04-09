@@ -57,13 +57,19 @@ const Offer = () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("No user found")
 
+      console.log('Fetching time balance for user on Offer page:', user.id)
       const { data, error } = await supabase
         .from('time_balances')
         .select('balance')
         .eq('user_id', user.id)
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching time balance on Offer page:', error)
+        throw error
+      }
+      
+      console.log('Time balance data on Offer page:', data)
       return data
     }
   })

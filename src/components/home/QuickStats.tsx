@@ -11,23 +11,7 @@ const QuickStats = () => {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    const channel = supabase
-      .channel('user-stats-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_stats',
-          filter: `user_id=eq.${supabase.auth.getUser().then(({ data }) => data.user?.id)}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['user-stats'] })
-        }
-      )
-      .subscribe()
-
-    // Also subscribe to time balances changes
+    // Set up real-time listener for time balances changes
     const timeBalanceChannel = supabase
       .channel('time-balance-changes')
       .on(
@@ -35,18 +19,53 @@ const QuickStats = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'time_balances',
-          filter: `user_id=eq.${supabase.auth.getUser().then(({ data }) => data.user?.id)}`
+          table: 'time_balances'
         },
-        () => {
+        (payload) => {
+          console.log('Time balance update received:', payload)
           queryClient.invalidateQueries({ queryKey: ['time-balance'] })
         }
       )
       .subscribe()
 
+    // Set up real-time listener for offers changes to update stats
+    const offersChannel = supabase
+      .channel('offers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offers'
+        },
+        (payload) => {
+          console.log('Offers update received:', payload)
+          queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+          queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+        }
+      )
+      .subscribe()
+
+    // Also subscribe to user_stats changes
+    const userStatsChannel = supabase
+      .channel('user-stats-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_stats'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+        }
+      )
+      .subscribe()
+
     return () => {
-      supabase.removeChannel(channel)
       supabase.removeChannel(timeBalanceChannel)
+      supabase.removeChannel(offersChannel)
+      supabase.removeChannel(userStatsChannel)
     }
   }, [queryClient])
 
@@ -75,13 +94,19 @@ const QuickStats = () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("No user found")
 
+      console.log('Fetching time balance for user:', user.id)
       const { data, error } = await supabase
         .from('time_balances')
         .select('balance')
         .eq('user_id', user.id)
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching time balance:', error)
+        throw error
+      }
+      
+      console.log('Time balance data:', data)
       return data
     }
   })
