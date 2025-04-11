@@ -2,19 +2,20 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import OfferHeader from "./OfferHeader"
 import OfferStatus from "./OfferStatus"
-import { Check, Hourglass, X, Trash2 } from "lucide-react"
+import { Check, Hourglass, X, Trash2, CheckCircle2 } from "lucide-react"
 import { useApplicationManagement } from "@/hooks/useApplicationManagement"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { useDeleteOffer } from "@/hooks/useDeleteOffer"
+import { useCompleteOffer } from "@/hooks/useCompleteOffer"
 
 interface OfferCardProps {
   offer: {
     id: string
     title: string
     description: string
-    hours: number
+    hours?: number
     timeCredits?: number
     user: {
       id: string
@@ -34,6 +35,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { deleteOffer, isDeleting } = useDeleteOffer()
+  const { completeOffer, isCompleting } = useCompleteOffer()
   const { 
     applyToOffer, 
     applications, 
@@ -78,11 +80,43 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
     }
   }
 
+  const handleComplete = async () => {
+    try {
+      await completeOffer(offer.id)
+      toast({
+        title: "Success",
+        description: "Offer marked as completed and credits transferred",
+      })
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to complete offer: ${error.message}`,
+      })
+    }
+  }
+
+  const handleUpdateStatus = async (applicationId: string, status: 'accepted' | 'rejected') => {
+    try {
+      await updateApplicationStatus({ 
+        applicationId, 
+        status 
+      })
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to ${status} application: ${error.message}`,
+      })
+    }
+  }
+
   const renderApplyButton = () => {
     if (offer.isApplied) {
-      const statusColorClass = offer.applicationStatus === 'pending' 
+      const applicationStatus = offer.applicationStatus || 'pending';
+      const statusColorClass = applicationStatus === 'pending' 
         ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
-        : offer.applicationStatus === 'accepted'
+        : applicationStatus === 'accepted'
           ? 'bg-green-100 text-green-800 border-green-300'
           : 'bg-red-100 text-red-800 border-red-300';
         
@@ -93,8 +127,8 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
           className={`w-full md:w-auto mt-4 md:mt-0 ${statusColorClass}`}
         >
           <Hourglass className="h-4 w-4 mr-1" />
-          {offer.applicationStatus === 'pending' ? 'Application Pending' : 
-            offer.applicationStatus === 'accepted' ? 'Application Accepted' : 
+          {applicationStatus === 'pending' ? 'Application Pending' : 
+            applicationStatus === 'accepted' ? 'Application Accepted' : 
             'Application Rejected'}
         </Button>
       );
@@ -133,6 +167,8 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
     )
   }
 
+  const hasAcceptedApplication = applications?.some(app => app.status === 'accepted')
+
   return (
     <Card className="gradient-border card-hover">
       <CardContent className="p-6">
@@ -144,18 +180,32 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
         />
         <p className="mt-2 text-navy/80">{offer.description}</p>
         <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <OfferStatus status={offer.status} />
+          <OfferStatus status={offer.status || 'unknown'} />
           <div className="flex flex-col md:flex-row gap-2 md:items-center">
             {isOwner && (
-              <Button
-                onClick={handleDelete}
-                variant="destructive"
-                disabled={isDeleting}
-                className="w-full md:w-auto flex items-center justify-center"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
+              <>
+                {offer.status === 'booked' && hasAcceptedApplication ? (
+                  <Button
+                    onClick={handleComplete}
+                    variant="default"
+                    disabled={isCompleting}
+                    className="w-full md:w-auto flex items-center justify-center bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Mark as Done
+                  </Button>
+                ) : offer.status !== 'completed' && (
+                  <Button
+                    onClick={handleDelete}
+                    variant="destructive"
+                    disabled={isDeleting}
+                    className="w-full md:w-auto flex items-center justify-center"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
+              </>
             )}
             {!isOwner && renderApplyButton()}
           </div>
@@ -167,16 +217,13 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
             <div className="space-y-2">
               {applications.map((application: any) => (
                 <div key={application.id} className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-mint/10 p-3 rounded-lg">
-                  <span className="text-navy">{application.profiles.username}</span>
+                  <span className="text-navy">{application.profiles?.username || 'Unknown User'}</span>
                   {application.status === 'pending' && (
                     <div className="flex space-x-2">
                       <Button 
                         size="sm" 
                         variant="default"
-                        onClick={() => updateApplicationStatus({ 
-                          applicationId: application.id, 
-                          status: 'accepted' 
-                        })}
+                        onClick={() => handleUpdateStatus(application.id, 'accepted')}
                         disabled={isUpdating}
                         className="bg-teal hover:bg-teal/90 text-cream"
                       >
@@ -185,10 +232,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
                       <Button 
                         size="sm" 
                         variant="destructive"
-                        onClick={() => updateApplicationStatus({ 
-                          applicationId: application.id, 
-                          status: 'rejected' 
-                        })}
+                        onClick={() => handleUpdateStatus(application.id, 'rejected')}
                         disabled={isUpdating}
                       >
                         <X className="h-4 w-4" />

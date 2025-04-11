@@ -1,4 +1,3 @@
-
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
@@ -73,7 +72,6 @@ export const useApplicationManagement = (offerId?: string) => {
     enabled: !!offerId
   })
 
-  // Get all applications for the current user
   const { data: userApplications } = useQuery({
     queryKey: ['user-applications'],
     queryFn: async () => {
@@ -133,43 +131,46 @@ export const useApplicationManagement = (offerId?: string) => {
         })
         .eq('id', applicationId)
       
-      if (applicationError) throw applicationError
+      if (applicationError) {
+        console.error('Application update error:', applicationError)
+        return
+      }
 
       if (status === 'accepted') {
-        const { data: application } = await supabase
+        const { data: application, error: fetchError } = await supabase
           .from('offer_applications')
           .select('offer_id')
           .eq('id', applicationId)
           .single()
 
-        if (application) {
+        if (fetchError) {
+          console.error('Fetch application error:', fetchError)
+          return
+        }
+        
+        if (application && application.offer_id) {
           const { error: offerError } = await supabase
             .from('offers')
             .update({ 
-              status: 'booked',
+              status: 'booked', 
               updated_at: new Date().toISOString()
             })
             .eq('id', application.offer_id)
 
-          if (offerError) throw offerError
+          if (offerError) {
+            console.error("Error updating offer status:", offerError);
+            return
+          }
         }
       }
     },
     onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Application status updated successfully",
-      })
       queryClient.invalidateQueries({ queryKey: ['offer-applications'] })
       queryClient.invalidateQueries({ queryKey: ['offers'] })
       queryClient.invalidateQueries({ queryKey: ['user-applications'] })
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: "Failed to update application status: " + error.message,
-        variant: "destructive",
-      })
+      console.error('Application status update error:', error)
     }
   })
 
