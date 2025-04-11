@@ -21,9 +21,13 @@ const OfferOwnerActions = ({
   isDeleting,
   isCompleting
 }: OfferOwnerActionsProps) => {
-  // Following the user's requirements: if an offer has an accepted application,
-  // show the Mark as Done button; otherwise show the Delete button
-  if (hasAcceptedApplication && status !== 'completed') {
+  // If the offer is already completed, don't show any action buttons
+  if (status === 'completed') {
+    return null
+  }
+  
+  // If an offer has an accepted application, show the Mark as Done button
+  if (hasAcceptedApplication) {
     return (
       <Button
         onClick={onComplete}
@@ -37,21 +41,18 @@ const OfferOwnerActions = ({
     )
   }
 
-  if (!hasAcceptedApplication && status !== 'completed') {
-    return (
-      <Button
-        onClick={onDelete}
-        variant="destructive"
-        disabled={isDeleting}
-        className="w-full md:w-auto flex items-center justify-center"
-      >
-        <Trash2 className="h-4 w-4 mr-2" />
-        Delete
-      </Button>
-    )
-  }
-
-  return null
+  // If no accepted application, show the Delete button
+  return (
+    <Button
+      onClick={onDelete}
+      variant="destructive"
+      disabled={isDeleting}
+      className="w-full md:w-auto flex items-center justify-center"
+    >
+      <Trash2 className="h-4 w-4 mr-2" />
+      Delete
+    </Button>
+  )
 }
 
 export default OfferOwnerActions

@@ -15,7 +15,7 @@ export const useCompleteOffer = () => {
       // First get the offer to verify ownership and get details
       const { data: offer, error: offerError } = await supabase
         .from('offers')
-        .select('profile_id, time_credits')
+        .select('profile_id, time_credits, service_type')
         .eq('id', offerId)
         .single()
       
@@ -74,10 +74,10 @@ export const useCompleteOffer = () => {
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
-          service: 'Time Exchange',
+          service: offer.service_type || 'Time Exchange',
           hours: offer.time_credits || 1,
-          user_id: user.id,
-          provider_id: acceptedApplication.applicant_id,
+          user_id: user.id,  // Requester
+          provider_id: acceptedApplication.applicant_id,  // Service provider
           offer_id: offerId
         })
       
@@ -92,6 +92,7 @@ export const useCompleteOffer = () => {
       queryClient.invalidateQueries({ queryKey: ['offers'] })
       queryClient.invalidateQueries({ queryKey: ['time-balance'] })
       queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['completed-offers'] })
       queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
     },
     onError: (error) => {
