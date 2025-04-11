@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import OfferHeader from "./OfferHeader"
@@ -170,6 +171,9 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
   // Check if this offer has any accepted applications
   const hasAcceptedApplication = applications?.some(app => app.status === 'accepted')
 
+  // Determine if we should show the "Mark as Done" button
+  const shouldShowDoneButton = isOwner && hasAcceptedApplication
+
   return (
     <Card className="gradient-border card-hover">
       <CardContent className="p-6">
@@ -185,7 +189,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
           <div className="flex flex-col md:flex-row gap-2 md:items-center">
             {isOwner && (
               <>
-                {offer.status === 'booked' && hasAcceptedApplication && (
+                {shouldShowDoneButton && offer.status !== 'completed' ? (
                   <Button
                     onClick={handleComplete}
                     variant="default"
@@ -195,17 +199,18 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Mark as Done
                   </Button>
-                )}
-                {(offer.status !== 'booked' || !hasAcceptedApplication) && offer.status !== 'completed' && (
-                  <Button
-                    onClick={handleDelete}
-                    variant="destructive"
-                    disabled={isDeleting}
-                    className="w-full md:w-auto flex items-center justify-center"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
+                ) : (
+                  !shouldShowDoneButton && offer.status !== 'completed' && (
+                    <Button
+                      onClick={handleDelete}
+                      variant="destructive"
+                      disabled={isDeleting}
+                      className="w-full md:w-auto flex items-center justify-center"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  )
                 )}
               </>
             )}
