@@ -47,11 +47,23 @@ export const useCompleteOffer = () => {
       
       if (updateError) throw updateError
       
+      // First get the current balance of the service provider
+      const { data: currentBalance, error: balanceReadError } = await supabase
+        .from('time_balances')
+        .select('balance')
+        .eq('user_id', acceptedApplication.applicant_id)
+        .single()
+      
+      if (balanceReadError) throw balanceReadError
+      
+      // Calculate new balance
+      const newBalance = currentBalance.balance + (offer.time_credits || 1)
+      
       // Transfer the credits to the service provider (applicant who completed the service)
       const { error: balanceError } = await supabase
         .from('time_balances')
         .update({ 
-          balance: supabase.rpc('increment', { amount: offer.time_credits }),
+          balance: newBalance,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', acceptedApplication.applicant_id)
