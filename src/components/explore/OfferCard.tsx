@@ -167,6 +167,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
     )
   }
 
+  // Check if this offer has any accepted applications
   const hasAcceptedApplication = applications?.some(app => app.status === 'accepted')
 
   return (
@@ -184,7 +185,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
           <div className="flex flex-col md:flex-row gap-2 md:items-center">
             {isOwner && (
               <>
-                {offer.status === 'booked' && hasAcceptedApplication ? (
+                {offer.status === 'booked' && hasAcceptedApplication && (
                   <Button
                     onClick={handleComplete}
                     variant="default"
@@ -194,7 +195,8 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Mark as Done
                   </Button>
-                ) : offer.status !== 'completed' && (
+                )}
+                {(offer.status !== 'booked' || !hasAcceptedApplication) && offer.status !== 'completed' && (
                   <Button
                     onClick={handleDelete}
                     variant="destructive"
