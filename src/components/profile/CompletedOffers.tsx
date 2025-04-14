@@ -53,54 +53,75 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
         throw error
       }
 
-      // Use a Set to track processed offer IDs to prevent duplicates
-      const processedOfferIds = new Set()
-      
-      // Now fetch additional data for each transaction
-      const enrichedData = await Promise.all(data.map(async (transaction) => {
-        // Skip duplicate transactions for the same offer
-        if (processedOfferIds.has(transaction.offer_id)) {
-          return null
-        }
-        
-        processedOfferIds.add(transaction.offer_id)
-        
-        // Fetch offer details
-        const { data: offerData, error: offerError } = await supabase
-          .from('offers')
-          .select('title, description, time_credits')
-          .eq('id', transaction.offer_id)
-          .single()
-          
-        if (offerError) {
-          console.error('Error fetching offer details:', offerError)
-        }
-        
-        // Fetch requester username
-        const { data: userData, error: userError } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', transaction.user_id)
-          .single()
-          
-        if (userError) {
-          console.error('Error fetching requester username:', userError)
-        }
-        
-        return {
-          id: transaction.id,
-          title: offerData?.title || 'Untitled',
-          description: offerData?.description || 'No description',
-          service_type: transaction.service,
-          time_credits: offerData?.time_credits || 0,
-          hours: transaction.hours,
-          created_at: transaction.created_at,
-          requester_username: userData?.username || 'Unknown'
-        }
-      }))
+      // For each transaction, get the offer and requester details
+      const offerDetails = await Promise.all(
+        data.map(async (transaction) => {
+          try {
+            // Skip if no offer_id
+            if (!transaction.offer_id) {
+              return null
+            }
+            
+            // Fetch offer details
+            const { data: offerData, error: offerError } = await supabase
+              .from('offers')
+              .select('title, description, time_credits, service_type')
+              .eq('id', transaction.offer_id)
+              .maybeSingle()
+              
+            if (offerError) {
+              console.error('Error fetching offer details:', offerError)
+              return null
+            }
+            
+            if (!offerData) {
+              return null
+            }
+            
+            // Fetch requester username
+            const { data: userData, error: userError } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('id', transaction.user_id)
+              .maybeSingle()
+              
+            if (userError) {
+              console.error('Error fetching requester username:', userError)
+              return null
+            }
+            
+            return {
+              id: transaction.id,
+              title: offerData.title || 'Untitled',
+              description: offerData.description || 'No description',
+              service_type: offerData.service_type || transaction.service,
+              time_credits: offerData.time_credits || 0,
+              hours: transaction.hours,
+              created_at: transaction.created_at,
+              requester_username: userData?.username || 'Unknown'
+            }
+          } catch (err) {
+            console.error('Error processing transaction:', err)
+            return null
+          }
+        })
+      )
 
-      // Filter out nulls (duplicates) and return
-      return enrichedData.filter(item => item !== null) as CompletedOffer[]
+      // Filter out nulls and remove duplicates by checking title
+      const filteredOffers = offerDetails
+        .filter(Boolean)
+        .reduce((unique: CompletedOffer[], offer: CompletedOffer | null) => {
+          if (!offer) return unique
+          
+          const exists = unique.some(item => item.title === offer.title && 
+                                           item.requester_username === offer.requester_username)
+          if (!exists) {
+            unique.push(offer)
+          }
+          return unique
+        }, [])
+
+      return filteredOffers
     },
     enabled: !!userId
   })
@@ -130,54 +151,75 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
         throw error
       }
 
-      // Use a Set to track processed offer IDs to prevent duplicates
-      const processedOfferIds = new Set()
-      
-      // Now fetch additional data for each transaction
-      const enrichedData = await Promise.all(data.map(async (transaction) => {
-        // Skip duplicate transactions for the same offer
-        if (processedOfferIds.has(transaction.offer_id)) {
-          return null
-        }
-        
-        processedOfferIds.add(transaction.offer_id)
-        
-        // Fetch offer details
-        const { data: offerData, error: offerError } = await supabase
-          .from('offers')
-          .select('title, description, time_credits')
-          .eq('id', transaction.offer_id)
-          .single()
-          
-        if (offerError) {
-          console.error('Error fetching offer details:', offerError)
-        }
-        
-        // Fetch provider username
-        const { data: providerData, error: providerError } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', transaction.provider_id)
-          .single()
-          
-        if (providerError) {
-          console.error('Error fetching provider username:', providerError)
-        }
-        
-        return {
-          id: transaction.id,
-          title: offerData?.title || 'Untitled',
-          description: offerData?.description || 'No description',
-          service_type: transaction.service,
-          time_credits: offerData?.time_credits || 0,
-          hours: transaction.hours,
-          created_at: transaction.created_at,
-          provider_username: providerData?.username || 'Unknown'
-        }
-      }))
+      // For each transaction, get the offer and provider details
+      const offerDetails = await Promise.all(
+        data.map(async (transaction) => {
+          try {
+            // Skip if no offer_id
+            if (!transaction.offer_id) {
+              return null
+            }
+            
+            // Fetch offer details
+            const { data: offerData, error: offerError } = await supabase
+              .from('offers')
+              .select('title, description, time_credits, service_type')
+              .eq('id', transaction.offer_id)
+              .maybeSingle()
+              
+            if (offerError) {
+              console.error('Error fetching offer details:', offerError)
+              return null
+            }
+            
+            if (!offerData) {
+              return null
+            }
+            
+            // Fetch provider username
+            const { data: providerData, error: providerError } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('id', transaction.provider_id)
+              .maybeSingle()
+              
+            if (providerError) {
+              console.error('Error fetching provider username:', providerError)
+              return null
+            }
+            
+            return {
+              id: transaction.id,
+              title: offerData.title || 'Untitled',
+              description: offerData.description || 'No description',
+              service_type: offerData.service_type || transaction.service,
+              time_credits: offerData.time_credits || 0,
+              hours: transaction.hours,
+              created_at: transaction.created_at,
+              provider_username: providerData?.username || 'Unknown'
+            }
+          } catch (err) {
+            console.error('Error processing transaction:', err)
+            return null
+          }
+        })
+      )
 
-      // Filter out nulls (duplicates) and return
-      return enrichedData.filter(item => item !== null) as CompletedOffer[]
+      // Filter out nulls and remove duplicates by checking title
+      const filteredOffers = offerDetails
+        .filter(Boolean)
+        .reduce((unique: CompletedOffer[], offer: CompletedOffer | null) => {
+          if (!offer) return unique
+          
+          const exists = unique.some(item => item.title === offer.title && 
+                                           item.provider_username === offer.provider_username)
+          if (!exists) {
+            unique.push(offer)
+          }
+          return unique
+        }, [])
+
+      return filteredOffers
     },
     enabled: !!userId
   })
