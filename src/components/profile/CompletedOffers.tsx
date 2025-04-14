@@ -20,7 +20,6 @@ interface CompletedOffer {
   service_type: string
   time_credits: number
   created_at: string
-  completed_at: string
   provider_username?: string
   requester_username?: string
 }
@@ -43,16 +42,7 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
           hours,
           created_at,
           offer_id,
-          offers!inner(
-            title,
-            description,
-            service_type,
-            time_credits,
-            status,
-            profiles!inner(
-              username
-            )
-          )
+          user_id
         `)
         .eq('provider_id', userId)
         .order('created_at', { ascending: false })
@@ -62,17 +52,43 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
         throw error
       }
 
-      // Transform the data to match our needs
-      return data.map(transaction => ({
-        id: transaction.id,
-        title: transaction.offers.title,
-        description: transaction.offers.description,
-        service_type: transaction.service,
-        time_credits: transaction.offers.time_credits,
-        hours: transaction.hours,
-        created_at: transaction.created_at,
-        requester_username: transaction.offers.profiles.username
+      // Now fetch additional data for each transaction
+      const enrichedData = await Promise.all(data.map(async (transaction) => {
+        // Fetch offer details
+        const { data: offerData, error: offerError } = await supabase
+          .from('offers')
+          .select('title, description, time_credits')
+          .eq('id', transaction.offer_id)
+          .single()
+          
+        if (offerError) {
+          console.error('Error fetching offer details:', offerError)
+        }
+        
+        // Fetch requester username
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', transaction.user_id)
+          .single()
+          
+        if (userError) {
+          console.error('Error fetching requester username:', userError)
+        }
+        
+        return {
+          id: transaction.id,
+          title: offerData?.title || 'Untitled',
+          description: offerData?.description || 'No description',
+          service_type: transaction.service,
+          time_credits: offerData?.time_credits || 0,
+          hours: transaction.hours,
+          created_at: transaction.created_at,
+          requester_username: userData?.username || 'Unknown'
+        }
       }))
+
+      return enrichedData
     },
     enabled: !!userId
   })
@@ -92,16 +108,7 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
           hours,
           created_at,
           provider_id,
-          offer_id,
-          offers!inner(
-            title,
-            description,
-            service_type,
-            time_credits
-          ),
-          profiles!provider_id(
-            username
-          )
+          offer_id
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -111,17 +118,43 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
         throw error
       }
 
-      // Transform the data to match our needs
-      return data.map(transaction => ({
-        id: transaction.id,
-        title: transaction.offers.title,
-        description: transaction.offers.description,
-        service_type: transaction.service,
-        time_credits: transaction.offers.time_credits,
-        hours: transaction.hours,
-        created_at: transaction.created_at,
-        provider_username: transaction.profiles?.username || 'Unknown'
+      // Now fetch additional data for each transaction
+      const enrichedData = await Promise.all(data.map(async (transaction) => {
+        // Fetch offer details
+        const { data: offerData, error: offerError } = await supabase
+          .from('offers')
+          .select('title, description, time_credits')
+          .eq('id', transaction.offer_id)
+          .single()
+          
+        if (offerError) {
+          console.error('Error fetching offer details:', offerError)
+        }
+        
+        // Fetch provider username
+        const { data: providerData, error: providerError } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', transaction.provider_id)
+          .single()
+          
+        if (providerError) {
+          console.error('Error fetching provider username:', providerError)
+        }
+        
+        return {
+          id: transaction.id,
+          title: offerData?.title || 'Untitled',
+          description: offerData?.description || 'No description',
+          service_type: transaction.service,
+          time_credits: offerData?.time_credits || 0,
+          hours: transaction.hours,
+          created_at: transaction.created_at,
+          provider_username: providerData?.username || 'Unknown'
+        }
       }))
+
+      return enrichedData
     },
     enabled: !!userId
   })
