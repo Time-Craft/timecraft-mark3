@@ -19,6 +19,7 @@ interface CompletedOffer {
   description: string
   service_type: string
   time_credits: number
+  hours: number
   created_at: string
   provider_username?: string
   requester_username?: string
@@ -52,8 +53,18 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
         throw error
       }
 
+      // Use a Set to track processed offer IDs to prevent duplicates
+      const processedOfferIds = new Set()
+      
       // Now fetch additional data for each transaction
       const enrichedData = await Promise.all(data.map(async (transaction) => {
+        // Skip duplicate transactions for the same offer
+        if (processedOfferIds.has(transaction.offer_id)) {
+          return null
+        }
+        
+        processedOfferIds.add(transaction.offer_id)
+        
         // Fetch offer details
         const { data: offerData, error: offerError } = await supabase
           .from('offers')
@@ -88,7 +99,8 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
         }
       }))
 
-      return enrichedData
+      // Filter out nulls (duplicates) and return
+      return enrichedData.filter(item => item !== null) as CompletedOffer[]
     },
     enabled: !!userId
   })
@@ -118,8 +130,18 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
         throw error
       }
 
+      // Use a Set to track processed offer IDs to prevent duplicates
+      const processedOfferIds = new Set()
+      
       // Now fetch additional data for each transaction
       const enrichedData = await Promise.all(data.map(async (transaction) => {
+        // Skip duplicate transactions for the same offer
+        if (processedOfferIds.has(transaction.offer_id)) {
+          return null
+        }
+        
+        processedOfferIds.add(transaction.offer_id)
+        
         // Fetch offer details
         const { data: offerData, error: offerError } = await supabase
           .from('offers')
@@ -154,7 +176,8 @@ const CompletedOffers = ({ userId, username, avatar }: CompletedOffersProps) => 
         }
       }))
 
-      return enrichedData
+      // Filter out nulls (duplicates) and return
+      return enrichedData.filter(item => item !== null) as CompletedOffer[]
     },
     enabled: !!userId
   })
