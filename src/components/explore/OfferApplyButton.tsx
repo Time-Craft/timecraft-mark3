@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button"
 import { Check, Gift, Hourglass } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -14,6 +13,7 @@ interface OfferApplyButtonProps {
   userApplication?: any
   onApply: (offerId: string) => void
   isApplying: boolean
+  timeCredits?: number
 }
 
 const OfferApplyButton = ({ 
@@ -23,7 +23,8 @@ const OfferApplyButton = ({
   applicationStatus, 
   userApplication, 
   onApply, 
-  isApplying 
+  isApplying,
+  timeCredits = 1
 }: OfferApplyButtonProps) => {
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -34,10 +35,42 @@ const OfferApplyButton = ({
     try {
       setIsClaiming(true)
       
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+      
+      // First, get the current user's time balance
+      const { data: timeBalanceData, error: timeBalanceError } = await supabase
+        .from('time_balances')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single()
+      
+      if (timeBalanceError) throw timeBalanceError
+      
+      // Calculate the new balance
+      const currentBalance = timeBalanceData?.balance || 0
+      const newBalance = currentBalance + timeCredits
+      
+      // Update the user's time balance
+      const { error: updateBalanceError } = await supabase
+        .from('time_balances')
+        .update({ 
+          balance: newBalance,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+      
+      if (updateBalanceError) throw updateBalanceError
+      
+      // Update the transaction record to mark it as claimed
       const { error } = await supabase
         .from('transactions')
-        .update({ claimed: true })
+        .update({ 
+          claimed: true,
+          updated_at: new Date().toISOString()
+        })
         .eq('offer_id', offerId)
+        .eq('provider_id', user.id)
 
       if (error) throw error
 
@@ -49,9 +82,10 @@ const OfferApplyButton = ({
       // Set local state to show claimed status
       setIsClaimed(true)
 
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
+      // Invalidate relevant queries to update UI
       queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -76,7 +110,7 @@ const OfferApplyButton = ({
         } text-white`}
       >
         <Gift className="h-4 w-4 mr-1" />
-        {isClaimed ? 'Credits Claimed' : 'Claim Credits'}
+        {isClaimed ? 'Credits Claimed' : `Claim ${timeCredits} Credits`}
       </Button>
     )
   }

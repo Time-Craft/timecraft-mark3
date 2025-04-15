@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card"
 import OfferHeader from "./OfferHeader"
 import OfferStatus from "./OfferStatus"
@@ -139,6 +138,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
                 userApplication={userApplication}
                 onApply={applyToOffer}
                 isApplying={isApplying}
+                timeCredits={offer.timeCredits}
               />
             )}
           </div>
