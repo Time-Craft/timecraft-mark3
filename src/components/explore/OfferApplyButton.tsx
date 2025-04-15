@@ -1,8 +1,10 @@
+
 import { Button } from "@/components/ui/button"
 import { Check, Gift, Hourglass } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+import { useState } from "react"
 
 interface OfferApplyButtonProps {
   offerId: string
@@ -25,9 +27,13 @@ const OfferApplyButton = ({
 }: OfferApplyButtonProps) => {
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const [isClaiming, setIsClaiming] = useState(false)
+  const [isClaimed, setIsClaimed] = useState(false)
 
   const handleClaim = async () => {
     try {
+      setIsClaiming(true)
+      
       const { error } = await supabase
         .from('transactions')
         .update({ claimed: true })
@@ -40,6 +46,9 @@ const OfferApplyButton = ({
         description: "Credits have been claimed successfully!",
       })
 
+      // Set local state to show claimed status
+      setIsClaimed(true)
+
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
       queryClient.invalidateQueries({ queryKey: ['time-balance'] })
@@ -49,23 +58,31 @@ const OfferApplyButton = ({
         title: "Error",
         description: "Failed to claim credits: " + error.message,
       })
+    } finally {
+      setIsClaiming(false)
     }
+  }
+  
+  // Only show claim button for service providers (applicants) when the offer is completed
+  if (isApplied && status === 'completed' && (applicationStatus === 'accepted' || userApplication?.status === 'accepted')) {
+    return (
+      <Button 
+        onClick={handleClaim}
+        disabled={isClaiming || isClaimed}
+        className={`w-full md:w-auto mt-4 md:mt-0 ${
+          isClaimed 
+            ? 'bg-gray-400 hover:bg-gray-400' 
+            : 'bg-green-500 hover:bg-green-600'
+        } text-white`}
+      >
+        <Gift className="h-4 w-4 mr-1" />
+        {isClaimed ? 'Credits Claimed' : 'Claim Credits'}
+      </Button>
+    )
   }
   
   if (isApplied) {
     const appStatus = applicationStatus || 'pending'
-    
-    if (status === 'completed') {
-      return (
-        <Button 
-          onClick={handleClaim}
-          className="w-full md:w-auto mt-4 md:mt-0 bg-green-500 hover:bg-green-600 text-white"
-        >
-          <Gift className="h-4 w-4 mr-1" />
-          Claim Credits
-        </Button>
-      )
-    }
     
     const statusColorClass = appStatus === 'pending' 
       ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
